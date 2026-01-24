@@ -29,4 +29,4 @@ def user_login(request):
     if user and check_password(hashed_password, user.password):
         return Response({"message": "Login successful"}, status=status.HTTP_200_OK)
     else:
-        return Response({"message": ""}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"message": "Invalid credentials"}, status=status.HTTP_404_NOT_FOUND)
