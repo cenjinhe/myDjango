@@ -14,6 +14,7 @@ RUN_PORT="5000"
 # 检查python3是否可用
 if ! command -v python3 &> /dev/null; then
     echo "未找到python3，请先安装Python 3.8+"
+    exit 0
 fi
 
 # 检查requirements.txt是否存在
