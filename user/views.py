@@ -33,26 +33,26 @@ def user_login(request):
     try:
         # 兼容JSON/form-data/urlencoded三种请求格式
         data = request.data
-        user_name = data.get("user_name", "").strip()  # 去除首尾空格
-        password = data.get("password", "").strip()    # 变量名修正：原hashed_password易混淆（实际是明文）
+        username = data.get("user_name", "").strip()
+        password = data.get("hashed_password", "").strip()
     except Exception as e:
         logger.error(f"登录接口解析参数失败: {str(e)}")
         return Response({"message": "Invalid request data format"}, status=status.HTTP_400_BAD_REQUEST)
 
     # 2. 严谨的参数校验（拆分提示，更友好）
-    if not user_name:
-        return Response({"message": "user_name is required"}, status=status.HTTP_400_BAD_REQUEST)
+    if not username:
+        return Response({"message": "username is required"}, status=status.HTTP_400_BAD_REQUEST)
     if not password:
         return Response({"message": "password is required"}, status=status.HTTP_400_BAD_REQUEST)
 
     # 3. 查询用户并处理异常（避免数据库错误导致接口崩溃）
     try:
-        user = User.objects.get(user_name=user_name)
+        user = User.objects.get(username=username)
     except User.DoesNotExist:
-        logger.warning(f"登录失败：用户不存在 - 用户名：{user_name}")
+        logger.warning(f"登录失败：用户不存在 - 用户名：{username}")
         return Response({"message": "User does not exist"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        logger.error(f"登录接口查询用户异常: {str(e)} | 用户名：{user_name}")
+        logger.error(f"登录接口查询用户异常: {str(e)} | 用户名：{username}")
         return Response({"message": "Server internal error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # 4. 验证密码并生成 JWT Token
@@ -60,7 +60,7 @@ def user_login(request):
         # 为用户生成 JWT Token（RefreshToken 包含 AccessToken）
         refresh = RefreshToken.for_user(user)
 
-        logger.info(f"用户登录成功 - 用户名：{user_name} | 用户ID：{user.id}")
+        logger.info(f"用户登录成功 - 用户名：{username} | 用户ID：{user.id}")
         return Response(
             {
                 "message": "Login successful",
@@ -68,14 +68,14 @@ def user_login(request):
                 "access": str(refresh.access_token),    # 访问令牌（短期，接口请求时携带）
                 "user_info": {                          # 基础用户信息
                     "user_id": user.id,
-                    "user_name": user.user_name,
+                    "username": user.username,
                     "phone": user.phone if hasattr(user, 'phone') else None
                 }
             },
             status=status.HTTP_200_OK
         )
     else:
-        logger.warning(f"登录失败：密码错误 - 用户名：{user_name}")
+        logger.warning(f"登录失败：密码错误 - 用户名：{username}")
         # 401语义更准确（认证失败）
         return Response({"message": "Invalid password"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -97,8 +97,8 @@ def user_register(request):
             "phone": "手机号（选填，建议加唯一性校验）"
         }
     响应示例：
-        201: {"message": "Register successful", "user_id": 1, "user_name": "test"}
-        400: {"message": "user_name already exists"}
+        201: {"message": "Register successful"}
+        400: {"message": "username already exists"}
         400: {"message": "phone format is invalid"}
         500: {"message": "Server internal error"}
     """
@@ -204,7 +204,7 @@ def user_register(request):
 #         try:
 #             token = RefreshToken(refresh_token)
 #         except TokenError as e:
-#             logger.warning(f"登出失败：无效的 Refresh Token - {str(e)} | 用户：{request.user.user_name}")
+#             logger.warning(f"登出失败：无效的 Refresh Token - {str(e)} | 用户：{request.user.username}")
 #             return Response(
 #                 {"message": "Invalid refresh token"},
 #                 status=status.HTTP_401_UNAUTHORIZED
@@ -221,20 +221,20 @@ def user_register(request):
 #             if not BlacklistedToken.objects.filter(token=ot).exists():
 #                 BlacklistedToken.objects.create(token=ot)
 #
-#         logger.info(f"用户登出成功 - 用户名：{request.user.user_name}")
+#         logger.info(f"用户登出成功 - 用户名：{request.user.username}")
 #         return Response(
 #             {"message": "Logout successful"},
 #             status=status.HTTP_200_OK
 #         )
 #
 #     except InvalidToken as e:
-#         logger.error(f"登出失败：Token 无效 - {str(e)} | 用户：{request.user.user_name if request.user else '匿名'}")
+#         logger.error(f"登出失败：Token 无效 - {str(e)} | 用户：{request.user.username if request.user else '匿名'}")
 #         return Response(
 #             {"message": "Invalid token"},
 #             status=status.HTTP_401_UNAUTHORIZED
 #         )
 #     except Exception as e:
-#         logger.error(f"登出接口异常 - {str(e)} | 用户：{request.user.user_name if request.user else '匿名'}")
+#         logger.error(f"登出接口异常 - {str(e)} | 用户：{request.user.username if request.user else '匿名'}")
 #         return Response(
 #             {"message": "Server internal error"},
 #             status=status.HTTP_500_INTERNAL_SERVER_ERROR
