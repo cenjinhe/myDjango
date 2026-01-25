@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     # 第三方应用
     'rest_framework',                # add token认证1: 注册 DRF 和 simplejwt 应用
     'rest_framework_simplejwt',      # add token认证2: 注册 DRF 和 simplejwt 应用
-    'django_extensions',             # 用于执行命令 python manage.py show_urls
     # 自定义应用
     'user',                          # 注册 User APP
 ]
