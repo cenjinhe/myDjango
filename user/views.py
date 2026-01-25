@@ -1,5 +1,5 @@
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from django.contrib.auth.hashers import make_password, check_password
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework_simplejwt.tokens import RefreshToken    # 导入 JWT Token 生成模块
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
