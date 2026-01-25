@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -31,14 +32,62 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    # Django 内置应用
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'user',                          # 注册User APP
+    # 第三方应用
+    'rest_framework',                # add token认证1: 注册 DRF 和 simplejwt 应用
+    'rest_framework_simplejwt',      # add token认证2: 注册 DRF 和 simplejwt 应用
+    'django_extensions',             # 用于执行命令 python manage.py show_urls
+    # 自定义应用
+    'user',                          # 注册 User APP
 ]
+
+# add token认证2: 配置 DRF 认证框架（指定默认认证方式为 JWT）
+REST_FRAMEWORK = {
+    # 默认认证类：优先使用 JWT 认证
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    # 可选：默认权限类（未认证用户仅能访问允许匿名的接口）
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',  # 默认需要认证
+    ),
+    # 可选：接口限流（防刷）
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '10/min',  # 匿名用户每分钟10次请求
+        'user': '30/min'   # 已认证用户每分钟30次请求
+    }
+}
+
+# add token认证3: 配置 JWT 详细参数（关键：过期时间、加密算法等）
+SIMPLE_JWT = {
+    # Token 有效期：访问令牌（短期，建议15分钟）
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    # 刷新令牌（长期，用于刷新 Access Token，建议7天）
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    # 是否允许刷新令牌续期
+    'ROTATE_REFRESH_TOKENS': False,
+    # 刷新令牌续期时，是否作废旧令牌
+    'BLACKLIST_AFTER_ROTATION': True,
+    # 加密算法（推荐 HS256）
+    'ALGORITHM': 'HS256',
+    # 签名密钥（生产环境必须改为随机强密钥，可通过 django.core.management.utils.get_random_secret_key() 生成）
+    'SIGNING_KEY': SECRET_KEY,  # 临时使用 Django 自带的 SECRET_KEY，生产环境建议单独配置
+    # Token 前缀（前端请求头中使用，如 Authorization: Bearer <token>）
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    # 用户唯一标识字段（对应 User 模型的 user_name 字段）
+    'USER_ID_FIELD': 'user_name',
+    'USER_ID_CLAIM': 'user_id',
+}
 
 # 指定唯一的用户模型（格式：app名.模型名）
 AUTH_USER_MODEL = "user.User"
