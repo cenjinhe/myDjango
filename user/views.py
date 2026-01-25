@@ -81,6 +81,7 @@ def user_login(request):
 
 
 @api_view(["POST"])
+@permission_classes([AllowAny])
 @throttle_classes([AnonRateThrottle])  # 匿名用户限流
 # 配置settings.py：REST_FRAMEWORK = {"DEFAULT_THROTTLE_RATES": {"anon": "10/min"}}
 def user_register(request):
@@ -104,16 +105,16 @@ def user_register(request):
     # 1. 解析并清洗参数
     try:
         data = request.data
-        user_name = data.get("user_name", "").strip()
-        password = data.get("password", "").strip()
+        username = data.get("user_name", "").strip()
+        password = data.get("hashed_password", "").strip()
         phone = data.get("phone", "").strip()
     except Exception as e:
         logger.error(f"注册接口解析参数失败: {str(e)}")
         return Response({"message": "Invalid request data format"}, status=status.HTTP_400_BAD_REQUEST)
 
     # 2. 基础参数校验
-    if not user_name:
-        return Response({"message": "user_name is required"}, status=status.HTTP_400_BAD_REQUEST)
+    if not username:
+        return Response({"message": "username is required"}, status=status.HTTP_400_BAD_REQUEST)
     if not password:
         return Response({"message": "password is required"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -129,10 +130,10 @@ def user_register(request):
     # 5. 唯一性校验（核心：避免重复注册）
     try:
         # 校验用户名是否已存在
-        if User.objects.filter(user_name=user_name).exists():
-            logger.warning(f"注册失败：用户名已存在 - {user_name}")
+        if User.objects.filter(username=username).exists():
+            logger.warning(f"注册失败：用户名已存在 - {username}")
             return Response(
-                {"message": "user_name already exists"},
+                {"message": "username already exists"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -147,22 +148,22 @@ def user_register(request):
         # 6. 创建用户（自动哈希密码，避免明文存储）
         hashed_password = make_password(password)  # DRF内置哈希函数，安全可靠
         user = User.objects.create(
-            user_name=user_name,
+            username=username,
             password=hashed_password,  # 存储哈希后的密码
             phone=phone if phone else ""
         )
 
-        logger.info(f"用户注册成功 - 用户名：{user_name} | 用户ID：{user.id}")
+        logger.info(f"用户注册成功 - 用户名：{username} | 用户ID：{user.id}")
         return Response(
             {
                 "message": "Register successful",
                 "user_id": user.id,
-                "user_name": user.user_name
+                "username": user.username
             },
             status=status.HTTP_201_CREATED  # 201表示资源创建成功
         )
     except Exception as e:
-        logger.error(f"注册接口创建用户异常: {str(e)} | 用户名：{user_name}")
+        logger.error(f"注册接口创建用户异常: {str(e)} | 用户名：{username}")
         return Response(
             {"message": "Server internal error"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
