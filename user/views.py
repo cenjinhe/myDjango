@@ -14,7 +14,7 @@ from user.models import User
 
 
 @api_view(["POST"])
-@permission_classes([AllowAny])  # 登录接口允许匿名访问
+@permission_classes([AllowAny])        # 登录接口允许匿名访问
 def user_login(request):
     """
     用户登录接口（集成 JWT）
@@ -81,7 +81,7 @@ def user_login(request):
 
 
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny])        # 登录接口允许匿名访问
 @throttle_classes([AnonRateThrottle])  # 匿名用户限流
 # 配置settings.py：REST_FRAMEWORK = {"DEFAULT_THROTTLE_RATES": {"anon": "10/min"}}
 def user_register(request):
@@ -93,7 +93,7 @@ def user_register(request):
     请求参数（JSON/form-data/urlencoded）：
         {
             "user_name": "用户名（必填，唯一）",
-            "password": "明文密码（必填）",
+            "password":  "密码（必填）",
             "phone": "手机号（选填，建议加唯一性校验）"
         }
     响应示例：
