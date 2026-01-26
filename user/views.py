@@ -5,10 +5,10 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-import logging
+from config import get_logger
 
 # 配置日志（方便线上问题排查）
-logger = logging.getLogger(__name__)
+logger = get_logger(__file__)
 
 from user.models import User
 
@@ -105,8 +105,8 @@ def user_register(request):
     # 1. 解析并清洗参数
     try:
         data = request.data
-        username = data.get("user_name", "").strip()
-        password = data.get("hashed_password", "").strip()
+        username = data.get("username", "").strip()
+        password = data.get("password", "").strip()
         phone = data.get("phone", "").strip()
     except Exception as e:
         logger.error(f"注册接口解析参数失败: {str(e)}")
@@ -150,7 +150,7 @@ def user_register(request):
         user = User.objects.create(
             username=username,
             password=hashed_password,  # 存储哈希后的密码
-            phone=phone if phone else ""
+            phone=phone if phone else None
         )
 
         logger.info(f"用户注册成功 - 用户名：{username} | 用户ID：{user.id}")
