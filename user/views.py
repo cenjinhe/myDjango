@@ -259,4 +259,11 @@ def get_user_info(request):
             "roles": "角色（暂时未用）",
         }
     """
-    return Response({"message": "User info get successful"}, status=status.HTTP_200_OK)
+    return Response(
+        {
+         "roles": ['admin'],
+         "introduction": 'I am a super administrator',
+         "avatar": 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
+         "name": 'Super Admin'
+        },
+        status=status.HTTP_200_OK)
