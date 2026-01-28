@@ -22,5 +22,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # 2. 整合 user 应用的路由
-    path('api/user/', include('user.urls')),
+    path('cjh/user/api/', include('user.urls')),
 ]

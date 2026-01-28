@@ -62,8 +62,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '10/min',  # 匿名用户每分钟10次请求
-        'user': '30/min'   # 已认证用户每分钟30次请求
+        'anon': '1000/min',  # 匿名用户每分钟10次请求
+        'user': '3000/min'   # 已认证用户每分钟30次请求
     }
 }
 
@@ -83,8 +83,8 @@ SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,  # 临时使用 Django 自带的 SECRET_KEY，生产环境建议单独配置
     # Token 前缀（前端请求头中使用，如 Authorization: Bearer <token>）
     'AUTH_HEADER_TYPES': ('Bearer',),
-    # 用户唯一标识字段（对应 User 模型的 user_name 字段）
-    'USER_ID_FIELD': 'user_name',
+    # 用户唯一标识字段（对应 User 模型的 username 字段）
+    'USER_ID_FIELD': 'username',
     'USER_ID_CLAIM': 'user_id',
 }
 
