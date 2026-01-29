@@ -62,8 +62,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '1000/min',  # 匿名用户每分钟10次请求
-        'user': '3000/min'   # 已认证用户每分钟30次请求
+        'anon': '10/min',  # 匿名用户每分钟10次请求
+        'user': '30/min'   # 已认证用户每分钟30次请求
     }
 }
 
