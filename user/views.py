@@ -1,10 +1,12 @@
 from django.contrib.auth.hashers import make_password, check_password
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework_simplejwt.tokens import RefreshToken    # 导入 JWT Token 生成模块
+from rest_framework.decorators import api_view, permission_classes, throttle_classes, action
+from rest_framework_simplejwt.tokens import RefreshToken  # 导入 JWT Token 生成模块
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import viewsets, filters, status
+from .serializers import UserSerializer
+from .permissions import IsAdminRole
 from config import get_logger
 
 # 配置日志 (方便线上问题排查)
@@ -20,16 +22,16 @@ from user.models import User
 def user_register(request):
     """
     用户注册接口
-    接口说明: 
+    接口说明:
         - 接收用户名、密码、手机号，创建新用户 (自动哈希密码)
         - 包含用户名/手机号唯一性校验，避免重复注册
-    请求参数 (JSON/form-data/urlencoded): 
+    请求参数 (JSON/form-data/urlencoded):
         {
             "username": "用户名 (必填，唯一)",
             "password":  "密码 (必填)",
             "phone": "手机号 (选填，建议加唯一性校验)"
         }
-    响应示例: 
+    响应示例:
         201: {"message": "Register successful"}
         400: {"message": "username already exists"}
         400: {"message": "phone format is invalid"}
@@ -43,22 +45,35 @@ def user_register(request):
         phone = data.get("phone", "").strip()
     except Exception as e:
         logger.error(f"注册接口解析参数失败: {str(e)}")
-        return Response({"message": "Invalid request data format"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": "Invalid request data format"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     # 2. 基础参数校验
     if not username:
-        return Response({"message": "username is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": "username is required"}, status=status.HTTP_400_BAD_REQUEST
+        )
     if not password:
-        return Response({"message": "password is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": "password is required"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     # 3. 密码强度校验 (可选，建议添加)
     if len(password) < 6:
-        return Response({"message": "Password must be at least 6 characters long"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": "Password must be at least 6 characters long"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     # 4. 手机号格式校验 (可选，示例)
     import re
-    if phone and not re.match(r'^1[3-9]\d{9}$', phone):
-        return Response({"message": "phone format is invalid"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if phone and not re.match(r"^1[3-9]\d{9}$", phone):
+        return Response(
+            {"message": "phone format is invalid"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     # 5. 唯一性校验 (核心: 避免重复注册)
     try:
@@ -67,15 +82,14 @@ def user_register(request):
             logger.warning(f"注册失败: 用户名已存在 - {username}")
             return Response(
                 {"message": "username already exists"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # 可选: 校验手机号是否已存在 (如果需要)
         if phone and User.objects.filter(phone=phone).exists():
             logger.warning(f"注册失败: 手机号已存在 - {phone}")
             return Response(
-                {"message": "phone already exists"},
-                status=status.HTTP_400_BAD_REQUEST
+                {"message": "phone already exists"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # 6. 创建用户 (自动哈希密码，避免明文存储)
@@ -83,7 +97,7 @@ def user_register(request):
         user = User.objects.create(
             username=username,
             password=hashed_password,  # 存储哈希后的密码
-            phone=phone if phone else None
+            phone=phone if phone else None,
         )
 
         logger.info(f"用户注册成功 - 用户名: {username} | 用户ID: {user.id}")
@@ -91,15 +105,15 @@ def user_register(request):
             {
                 "message": "Register successful",
                 "user_id": user.id,
-                "username": user.username
+                "username": user.username,
             },
-            status=status.HTTP_201_CREATED  # 201表示资源创建成功
+            status=status.HTTP_201_CREATED,  # 201表示资源创建成功
         )
     except Exception as e:
         logger.error(f"注册接口创建用户异常: {str(e)} | 用户名: {username}")
         return Response(
             {"message": "Server internal error"},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -108,15 +122,15 @@ def user_register(request):
 def user_login(request):
     """
     用户登录接口 (集成 JWT)
-    接口说明: 
+    接口说明:
         - 接收用户名和密码，验证后返回登录状态和基础用户信息
         - 建议后续集成JWT/Token认证
-    请求参数 (JSON/form-data/urlencoded): 
+    请求参数 (JSON/form-data/urlencoded):
         {
             "username": "用户名 (必填)",
             "password": "密码 (必填)"
         }
-    响应: 
+    响应:
         返回 Access Token + Refresh Token
     """
     # 1. 修复参数获取方式 (DRF必须用request.data获取POST参数)
@@ -127,23 +141,35 @@ def user_login(request):
         password = data.get("password", "").strip()
     except Exception as e:
         logger.error(f"登录接口解析参数失败: {str(e)}")
-        return Response({"message": "Invalid request data format"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": "Invalid request data format"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     # 2. 严谨的参数校验 (拆分提示，更友好)
     if not username:
-        return Response({"message": "username is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": "username is required"}, status=status.HTTP_400_BAD_REQUEST
+        )
     if not password:
-        return Response({"message": "password is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": "password is required"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     # 3. 查询用户并处理异常 (避免数据库错误导致接口崩溃)
     try:
         user = User.objects.get(username=username)
     except User.DoesNotExist:
         logger.warning(f"登录失败: 用户不存在 - 用户名: {username}")
-        return Response({"message": "User does not exist"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"message": "User does not exist"}, status=status.HTTP_404_NOT_FOUND
+        )
     except Exception as e:
         logger.error(f"登录接口查询用户异常: {str(e)} | 用户名: {username}")
-        return Response({"message": "Server internal error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {"message": "Server internal error"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
     # 4. 验证密码并生成 JWT Token
     if check_password(password, user.password):
@@ -154,20 +180,26 @@ def user_login(request):
         return Response(
             {
                 "message": "Login successful",
-                "refresh_token": str(refresh),                # 刷新令牌 (长期，用于获取新的 Access Token)
-                "access_token": str(refresh.access_token),    # 访问令牌 (短期，接口请求时携带)
-                "user_info": {                                # 基础用户信息
+                "refresh_token": str(
+                    refresh
+                ),  # 刷新令牌 (长期，用于获取新的 Access Token)
+                "access_token": str(
+                    refresh.access_token
+                ),  # 访问令牌 (短期，接口请求时携带)
+                "user_info": {  # 基础用户信息
                     "user_id": user.id,
                     "username": user.username,
-                    "phone": user.phone if hasattr(user, 'phone') else None
-                }
+                    "phone": user.phone if hasattr(user, "phone") else None,
+                },
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
     else:
         logger.warning(f"登录失败: 密码错误 - 用户名: {username}")
         # 401语义更准确 (认证失败)
-        return Response({"message": "Invalid password"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(
+            {"message": "Invalid password"}, status=status.HTTP_401_UNAUTHORIZED
+        )
 
 
 @api_view(["POST"])
@@ -175,23 +207,25 @@ def user_login(request):
 def user_logout(request):
     """
     用户登出接口 (JWT 黑名单实现)
-    接口说明: 
+    接口说明:
         - 接收 Refresh Token, 将其加入黑名单 (无法再刷新 Access Token)
         - 同时清理该用户所有未过期的 Outstanding Token
         - 前端需配合清除本地存储的 Access/Refresh Token
-    请求参数 (JSON): 
+    请求参数 (JSON):
         {
             "refresh": "登录时获取的 Refresh Token (必填)"
         }
-    请求头: 
+    请求头:
         Authorization: Bearer <Access Token>  (必须携带有效的 Access Token 认证)
-    响应示例: 
+    响应示例:
         200: {"message": "Logout successful"}
         400: {"message": "refresh token is required"}
         401: {"message": "Invalid refresh token"}
         500: {"message": "Server internal error"}
     """
     return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
+
+
 #     try:
 #         # 1. 获取并校验 Refresh Token 参数
 #         refresh_token = request.data.get("refresh", "").strip()
@@ -247,9 +281,9 @@ def user_logout(request):
 def get_user_info(request):
     """
     获取用户信息
-    接口说明: 
+    接口说明:
         - 根据Access Token, 获取用户信息
-    请求参数: 
+    请求参数:
         {
             "access_token": "Access Token",
         }
@@ -261,9 +295,64 @@ def get_user_info(request):
     """
     return Response(
         {
-         "roles": ['admin'],
-         "introduction": 'I am a super administrator',
-         "avatar": 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
-         "name": 'Super Admin'
+            "roles": ["admin"],
+            "introduction": "I am a super administrator",
+            "avatar": "https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif",
+            "name": "Super Admin",
         },
-        status=status.HTTP_200_OK)
+        status=status.HTTP_200_OK,
+    )
+
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """用户管理视图集: CRUD + 批量删除"""
+    # 1. 数据源：查询所有用户数据
+    queryset = User.objects.all()
+    # 2. 序列化器：ModelViewSet 内置的所有 CRUD 方法（list/retrieve/create/update/destroy）都会自动调用这个序列化器
+    serializer_class = UserSerializer
+    # 3. 权限控制：仅允许 admin 角色访问（自定义权限类）
+    permission_classes = [IsAdminRole]
+    # 4. 过滤/搜索/排序后端配置
+    filter_backends = [
+        # DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    # 5. 可筛选字段：支持按 role 字段精准筛选（如 ?role=admin）
+    filterset_fields = ["role"]  # 按角色筛选
+    # 6. 可搜索字段：支持模糊搜索 username/phone/email（如 ?search=张三）
+    search_fields = ["username", "phone", "email"]  # 搜索字段
+    # 7. 可排序字段：支持按 created_at/updated_at 排序（如 ?ordering=-created_at）
+    ordering_fields = ["created_at", "updated_at"]  # 排序字段
+
+    # 自定义删除响应（覆盖 ModelViewSet 原生的 destroy 方法）
+    def destroy(self, request, *args, **kwargs):
+        # 获取要删除的用户实例（通过 URL 中的 pk 参数，如 /api/users/1/）
+        instance = self.get_object()
+        # 执行删除操作（DRF 内置方法，本质是 instance.delete()）
+        self.perform_destroy(instance)
+        # 返回自定义响应：替换原生的 204 No Content，改为 200 OK + 提示信息
+        return Response({"msg": "删除用户成功"}, status=status.HTTP_200_OK)
+
+    # 批量删除接口（自定义 action）
+    # 通过 @action 装饰器定义一个新的 POST 方法，URL 路径为 /api/users/batch_delete/
+    # methods=['post']：该接口仅允许 POST 请求（批量删除属于写操作，不适合 GET）；
+    # detail=False：表示该接口是 “列表级”（URL 为 /api/users/batch_delete/），而非 “实例级”（如 /api/users/1/）；
+    @action(methods=["post"], detail=False)
+    def batch_delete(self, request):
+        """批量删除用户"""
+        # 从 POST 请求体中获取要删除的用户 ID 列表（前端传 {ids: [1,2,3]}）
+        user_ids = request.data.get("ids", [])
+        if not user_ids:
+            # 校验：若未传 ids 或 ids 为空，返回 400 错误
+            return Response(
+                {"msg": "请选择要删除的用户"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        # 安全校验：排除当前登录用户，避免删除自己
+        user_ids = [uid for uid in user_ids if uid != request.user.id]
+        # 批量删除：根据 ID 列表删除用户（比循环删除更高效）
+        User.objects.filter(id__in=user_ids).delete()
+        return Response(
+            {"msg": f"成功删除{len(user_ids)}个用户"}, status=status.HTTP_200_OK
+        )
