@@ -1,11 +1,13 @@
 #!/bin/zsh
 
 # ===================== 基础配置 =====================
-# 虚拟环境目录（脚本上级目录的myvenv）
-VENV_PARENT_DIR=$(cd "$(dirname "${0}")/../" && pwd)
+SCRIPT_DIR=$(cd "$(dirname "${0}")" && pwd)
+PROJECT_ROOT=$(cd "${SCRIPT_DIR}/../" && pwd)
+# 虚拟环境目录
+VENV_PARENT_DIR=$(cd "${PROJECT_ROOT}/../" && pwd)
 VENV_DIR="${VENV_PARENT_DIR}/myvenv"
-# 依赖文件路径（脚本所在目录的requirements.txt）
-REQUIREMENTS_FILE=$(cd "$(dirname "${0}")" && pwd)/requirements.txt
+# 依赖文件路径
+REQUIREMENTS_FILE=${PROJECT_ROOT}/requirements.txt
 # 服务启动地址和端口
 RUN_HOST="127.0.0.1"
 RUN_PORT="5000"
@@ -13,7 +15,7 @@ RUN_PORT="5000"
 # ===================== 验证基础依赖 =====================
 # 检查python3是否可用
 if ! command -v python3 &> /dev/null; then
-    echo "未找到python3，请先安装Python 3.8+"
+    echo "未找到python3, 请先安装Python 3.8+"
     exit 0
 fi
 
@@ -22,7 +24,7 @@ if [ ! -f "${REQUIREMENTS_FILE}" ]; then
     echo "依赖文件不存在：${REQUIREMENTS_FILE}"
 fi
 
-# ===================== 创建虚拟环境（若不存在） =====================
+# ===================== 创建虚拟环境（若不存在） ================
 if [ ! -d "${VENV_DIR}" ]; then
     echo "🔧 虚拟环境目录不存在，正在创建：${VENV_DIR}"
     # 创建虚拟环境（禁用pip升级提示，减少干扰）
@@ -52,5 +54,5 @@ python3 -m pip install -r "${REQUIREMENTS_FILE}" -q || echo "依赖安装失败"
 echo "✅ 依赖安装完成"
 
 # ===================== 启动服务 =====================
-echo "🚀 正在启动服务：http://${RUN_HOST}:${RUN_PORT}"
-python3 manage.py runserver "${RUN_HOST}:${RUN_PORT}"
+echo "🚀 正在启动服务: http://${RUN_HOST}:${RUN_PORT}"
+python3 $PROJECT_ROOT/manage.py runserver "${RUN_HOST}:${RUN_PORT}"
