@@ -294,7 +294,7 @@ def get_user_info(request):
         - 根据Access Token, 获取用户信息
     请求参数:
         {
-            "token": "Access Token",  # 修正参数名为token（匹配你的URL）
+            "token": "Access Token",  # 修正参数名为token(匹配你的URL)
         }
     响应成功:
         {
@@ -309,22 +309,22 @@ def get_user_info(request):
             "detail": "错误信息"
         }
     """
-    # 1. 从URL参数获取token（匹配你的请求：?token=xxx）
+    # 1. 从URL参数获取token(匹配你的请求:?token=xxx)
     token = request.GET.get("token")
 
     # 2. 校验token是否存在
     if not token:
-        logger.warning("获取用户信息失败：Token参数缺失")
+        logger.warning("获取用户信息失败:Token参数缺失")
         return Response(
-            {"detail": "Token参数缺失，请在URL中传入token参数"},
+            {"detail": "Token参数缺失,请在URL中传入token参数"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     try:
-        # 3. 验证Token的有效性（SimpleJWT内置校验）
+        # 3. 验证Token的有效性(SimpleJWT内置校验)
         UntypedToken(token)
 
-        # 4. 解码Token获取用户ID（适配SimpleJWT的Payload格式）
+        # 4. 解码Token获取用户ID(适配SimpleJWT的Payload格式)
         decoded_token = jwt.decode(
             token,
             settings.SECRET_KEY,
@@ -335,33 +335,33 @@ def get_user_info(request):
             ),
             options={"verify_signature": True},
         )
-        # 从解码后的Token中获取user_id（SimpleJWT默认存储的键是user_id）
+        # 从解码后的Token中获取user_id(SimpleJWT默认存储的键是user_id)
         user_id = decoded_token.get("user_id")
 
-        # 5. 根据user_id查询用户信息（你的自定义User模型）
+        # 5. 根据user_id查询用户信息
         user = User.objects.get(id=user_id)
 
-        # 6. 构造响应数据（适配你的User模型字段，可根据实际调整）
-        # 假设你的User模型有role字段（角色）、avatar字段（头像），无则用默认值
+        # 6. 构造响应数据(适配你的User模型字段,可根据实际调整)
+        # 假设你的User模型有role字段(角色)、avatar字段(头像),无则用默认值
         user_roles = (
             [user.role] if hasattr(user, "role") else ["viewer"]
-        )  # 角色默认查看者
+        )
         response_data = {
             "username": user.username,
-            "roles": user_roles,  # 角色列表（符合前端常用格式）
-            "introduction": f"I am {user.username}",  # 简介，可自定义
+            "roles": user_roles,  # 角色列表(符合前端常用格式)
+            "introduction": f"I am {user.username}",  # 简介,可自定义
             "avatar": (
                 user.avatar
                 if hasattr(user, "avatar")
                 else "https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif"
             ),
-            "name": user.username,  # 用户名，可替换为昵称字段（如user.nickname）
+            "name": user.username,
         }
 
-        logger.info(f"用户{user.username}（ID:{user_id}）成功获取个人信息")
+        logger.info(f"用户{user.username} (ID:{user_id}) 成功获取个人信息")
         return Response(response_data, status=status.HTTP_200_OK)
 
-    # 异常处理：Token无效/过期/签名错误
+    # 异常处理:Token无效/过期/签名错误
     except (
         InvalidToken,
         TokenError,
@@ -369,16 +369,16 @@ def get_user_info(request):
         jwt.InvalidSignatureError,
     ) as e:
         logger.error(
-            f"Token校验失败：{str(e)}，Token值：{token[:20]}..."
-        )  # 日志脱敏，只打印前20位
+            f"Token校验失败:{str(e)},Token值:{token[:20]}..."
+        )  # 日志脱敏,只打印前20位
         return Response(
-            {"detail": "Token无效或已过期，请重新登录"},
+            {"detail": "Token无效或已过期,请重新登录"},
             status=status.HTTP_401_UNAUTHORIZED,
         )
-    # 异常处理：用户不存在
+    # 异常处理:用户不存在
     except User.DoesNotExist:
         logger.error(
-            f"Token对应的用户不存在，user_id：{decoded_token.get('user_id') if 'decoded_token' in locals() else '未知'}"
+            f"Token对应的用户不存在,user_id:{decoded_token.get('user_id') if 'decoded_token' in locals() else '未知'}"
         )
         return Response(
             {"detail": "Token对应的用户不存在"}, status=status.HTTP_404_NOT_FOUND
@@ -386,10 +386,10 @@ def get_user_info(request):
     # 其他未知异常
     except Exception as e:
         logger.error(
-            f"获取用户信息异常：{str(e)}", exc_info=True
+            f"获取用户信息异常:{str(e)}", exc_info=True
         )  # exc_info=True记录完整堆栈
         return Response(
-            {"detail": "服务器内部错误，获取用户信息失败"},
+            {"detail": "服务器内部错误,获取用户信息失败"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
