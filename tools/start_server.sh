@@ -42,9 +42,9 @@ echo "👓 VIRTUAL_ENV=${VIRTUAL_ENV}"
 
 # 验证虚拟环境是否激活成功（检查python路径是否指向虚拟环境）
 if [[ ! "${VIRTUAL_ENV}" == "${VENV_DIR}" ]]; then
-    echo "虚拟环境激活异常，VIRTUAL_ENV变量不匹配"
+    echo "虚拟环境激活异常, VIRTUAL_ENV变量不匹配"
 fi
-echo "✅ 虚拟环境激活成功（当前Python：$(which python)）"
+echo "✅ 虚拟环境激活成功(当前Python:$(which python))"
 
 # ===================== 安装依赖 =====================
 echo "🔧 正在安装依赖：${REQUIREMENTS_FILE}"
