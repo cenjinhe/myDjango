@@ -86,8 +86,8 @@ SIMPLE_JWT = {
     # Token 前缀（前端请求头中使用，如 Authorization: Bearer <token>）
     'AUTH_HEADER_TYPES': ('Bearer',),
     # 用户唯一标识字段（对应 User 模型的 username 字段）
-    'USER_ID_FIELD': 'username',
-    'USER_ID_CLAIM': 'user_id',
+    'USER_ID_FIELD': 'id',      # 也可以改为 'id'，但需要确保 User 模型中有对应字段，并且在生成 Token 时正确设置该字段的值
+    'USER_ID_CLAIM': 'user_id', # JWT 中存储用户 ID 的字段名（默认是 'user_id'，也可以改为 'id' 或其他名称，但需要保持一致）
 }
 
 # 指定唯一的用户模型（格式：app名.模型名）
