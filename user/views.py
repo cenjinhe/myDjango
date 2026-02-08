@@ -5,9 +5,8 @@ from rest_framework.decorators import (
     throttle_classes,
     action,
 )
-from rest_framework_simplejwt.tokens import RefreshToken, UntypedToken  # UntypedToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError  # 异常类
-from rest_framework_simplejwt.tokens import RefreshToken  # 导入 JWT Token 生成模块
+from rest_framework_simplejwt.tokens import RefreshToken, UntypedToken # 导入 JWT Token 生成模块, 校验模块
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
